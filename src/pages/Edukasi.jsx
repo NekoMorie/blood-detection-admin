@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 import Pagination from '../components/Pagination';
+import ImageModal from '../components/ImageModal';
 import { useNavigate } from 'react-router-dom';
 
 export default function Edukasi() {
@@ -10,6 +11,8 @@ export default function Edukasi() {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     const storedData = localStorage.getItem('edukasi_data');
@@ -71,9 +74,18 @@ export default function Edukasi() {
             {paginatedData.map((row) => (
               <tr key={row.id}>
                 <td>
-                  <div style={{ width: '40px', height: '40px', background: 'var(--background)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                    <ImageIcon size={20} />
-                  </div>
+                  {row.image ? (
+                    <img 
+                      src={row.image} 
+                      alt="" 
+                      style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }} 
+                      onClick={() => setSelectedImage(row.image)}
+                    />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', background: 'var(--background)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                      <ImageIcon size={20} />
+                    </div>
+                  )}
                 </td>
                 <td>
                   <div style={{ fontWeight: 600 }}>{row.judul}</div>
@@ -109,6 +121,8 @@ export default function Edukasi() {
           onItemsPerPageChange={setItemsPerPage} 
         />
       </div>
+      
+      <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
     </div>
   );
 }

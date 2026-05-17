@@ -2,17 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import JoditEditor from 'jodit-react';
+import ImageModal from '../components/ImageModal';
 
 export default function EdukasiForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const editor = useRef(null);
   
+  const [selectedImage, setSelectedImage] = useState(null);
+  
   const [formData, setFormData] = useState({
     judul: '',
     sumber: '',
     isi: '',
-    admin: 'admin'
+    admin: 'admin',
+    image: ''
   });
 
   useEffect(() => {
@@ -27,12 +31,24 @@ export default function EdukasiForm() {
             judul: item.judul,
             sumber: item.sumber,
             isi: item.isi,
-            admin: item.admin
+            admin: item.admin,
+            image: item.image || ''
           });
         }
       }
     }
   }, [id]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -82,6 +98,25 @@ export default function EdukasiForm() {
 
       <div className="card">
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Gambar Edukasi</label>
+            <input 
+              type="file" 
+              className="form-control" 
+              accept="image/*"
+              onChange={handleImageChange}
+              style={{ marginBottom: '12px' }}
+            />
+            {formData.image && (
+              <div 
+                style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', display: 'inline-block', cursor: 'pointer' }}
+                onClick={() => setSelectedImage(formData.image)}
+              >
+                <img src={formData.image} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+              </div>
+            )}
+          </div>
+          
           <div className="grid-cols-2">
             <div className="form-group">
               <label className="form-label">Judul Materi</label>
@@ -127,6 +162,8 @@ export default function EdukasiForm() {
           </div>
         </form>
       </div>
+      
+      <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
     </div>
   );
 }
