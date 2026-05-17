@@ -5,7 +5,7 @@ import ImageModal from '../components/ImageModal';
 import { useNavigate } from 'react-router-dom';
 import { apiClient as axios } from '../api/darah';
 
-const API_URL = 'http://localhost:5000/edukasi';
+const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/edukasi`;
 
 export default function Edukasi() {
   const navigate = useNavigate();

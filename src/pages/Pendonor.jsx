@@ -4,7 +4,7 @@ import Pagination from '../components/Pagination';
 import { Link } from 'react-router-dom';
 import { apiClient as axios } from '../api/darah';
 
-const API_URL = 'http://localhost:5000/pendonor';
+const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pendonor`;
 
 export default function Pendonor() {
   const [data, setData] = useState([]);

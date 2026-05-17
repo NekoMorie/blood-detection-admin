@@ -17,7 +17,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/dashboard/stats');
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/dashboard/stats`);
         setStats(res.data.stats);
         setBloodTypeData(res.data.bloodTypeData);
       } catch (err) {

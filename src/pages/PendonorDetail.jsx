@@ -10,7 +10,7 @@ export default function PendonorDetail() {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/pendonor/${id}/detail`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pendonor/${id}/detail`);
         setDonorData(res.data);
       } catch (err) {
         console.error('Error fetching detail:', err);

@@ -3,7 +3,7 @@ import { Plus, Edit, Trash2, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { apiClient as axios } from '../api/darah';
 
-const API_URL = 'http://localhost:5000/alat';
+const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/alat`;
 
 export default function Alat() {
   const [data, setData] = useState([]);

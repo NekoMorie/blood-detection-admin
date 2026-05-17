@@ -5,7 +5,7 @@ import JoditEditor from 'jodit-react';
 import ImageModal from '../components/ImageModal';
 import { apiClient as axios } from '../api/darah';
 
-const API_URL = 'http://localhost:5000/edukasi';
+const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/edukasi`;
 
 export default function EdukasiForm() {
   const { id } = useParams();
@@ -69,7 +69,7 @@ export default function EdukasiForm() {
       if (imageFile) {
         const formDataObj = new FormData();
         formDataObj.append('gambar', imageFile);
-        const uploadRes = await axios.post('http://localhost:5000/upload/edukasi', formDataObj);
+        const uploadRes = await axios.post(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/upload/edukasi`, formDataObj);
         finalData.gambar = uploadRes.data.imageUrl;
       }
 

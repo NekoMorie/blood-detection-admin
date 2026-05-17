@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { apiClient as axios } from '../api/darah';
 import Select from 'react-select';
 
-const API_URL = 'http://localhost:5000/pemeriksaan';
+const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pemeriksaan`;
 
 export default function Pemeriksaan() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,16 +32,16 @@ export default function Pemeriksaan() {
       const res = await axios.get(API_URL);
       setData(res.data);
       
-      const adminRes = await axios.get('http://localhost:5000/admin');
+      const adminRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/admin`);
       setAdmins(adminRes.data);
       
-      const pendonorRes = await axios.get('http://localhost:5000/pendonor');
+      const pendonorRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pendonor`);
       setPendonors(pendonorRes.data);
       
-      const alatRes = await axios.get('http://localhost:5000/alat');
+      const alatRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/alat`);
       setAlats(alatRes.data);
       
-      const hasilRes = await axios.get('http://localhost:5000/hasil');
+      const hasilRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/hasil`);
       setHasils(hasilRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);

@@ -11,7 +11,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/auth/admin/login', formData);
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/auth/admin/login`, formData);
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('logged_in_admin', JSON.stringify(res.data.admin));
