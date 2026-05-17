@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import JoditEditor from 'jodit-react';
 import ImageModal from '../components/ImageModal';
-import axios from 'axios';
+import { apiClient as axios } from '../api/darah';
 
 const API_URL = 'http://localhost:5000/edukasi';
 
@@ -13,12 +13,18 @@ export default function EdukasiForm() {
   const editor = useRef(null);
   
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   
+  const adminStr = localStorage.getItem('logged_in_admin');
+  const loggedInAdmin = adminStr ? JSON.parse(adminStr) : null;
+  const adminId = loggedInAdmin ? loggedInAdmin._id : null;
+
   const [formData, setFormData] = useState({
     judul: '',
     sumber: '',
     isi_materi: '',
-    id_admin: 'admin',
+    id_admin: adminId,
     gambar: ''
   });
 
@@ -31,15 +37,16 @@ export default function EdukasiForm() {
   const fetchData = async () => {
     try {
       const res = await axios.get(API_URL);
-      const item = res.data.find(d => d.id_edukasi === id);
+      const item = res.data.find(d => d._id === id);
       if (item) {
         setFormData({
           judul: item.judul || '',
           sumber: item.sumber || '',
           isi_materi: item.isi_materi || '',
-          id_admin: item.id_admin || 'admin',
+          id_admin: item.id_admin || adminId,
           gambar: item.gambar || ''
         });
+        setImagePreview(item.gambar || null);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -49,22 +56,27 @@ export default function EdukasiForm() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, gambar: reader.result });
-      };
-      reader.readAsDataURL(file);
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      let finalData = { ...formData };
+      
+      if (imageFile) {
+        const formDataObj = new FormData();
+        formDataObj.append('gambar', imageFile);
+        const uploadRes = await axios.post('http://localhost:5000/upload/edukasi', formDataObj);
+        finalData.gambar = uploadRes.data.imageUrl;
+      }
+
       if (id) {
-        await axios.put(`${API_URL}/${id}`, formData);
+        await axios.put(`${API_URL}/${id}`, finalData);
       } else {
-        const newId = `E00${Math.floor(Math.random() * 1000)}`;
-        await axios.post(API_URL, { id_edukasi: newId, ...formData });
+        await axios.post(API_URL, finalData);
       }
       navigate('/edukasi');
     } catch (err) {
@@ -99,12 +111,12 @@ export default function EdukasiForm() {
               onChange={handleImageChange}
               style={{ marginBottom: '12px' }}
             />
-            {formData.gambar && (
+            {imagePreview && (
               <div 
                 style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', display: 'inline-block', cursor: 'pointer' }}
-                onClick={() => setSelectedImage(formData.gambar)}
+                onClick={() => setSelectedImage(imagePreview)}
               >
-                <img src={formData.gambar} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+                <img src={imagePreview} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }} />
               </div>
             )}
           </div>

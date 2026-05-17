@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Eye, CheckCircle, XCircle, Plus, Edit, Trash2, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient as axios } from '../api/darah';
 
 const API_URL = 'http://localhost:5000/pendonor';
 
@@ -11,6 +11,7 @@ export default function Pendonor() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ nama_pendonor: '', jenis_kelamin: 'Laki-laki', no_telepon: '', email: '', status_verifikasi: 'Belum Verifikasi' });
 
@@ -32,14 +33,15 @@ export default function Pendonor() {
 
   const filteredData = data.filter(d => 
     (d.nama_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (d.id_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (d._id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.id_user || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleOpenModal = (row = null) => {
     if (row) {
-      setEditId(row.id_pendonor);
+      setEditId(row._id);
       setFormData({ 
         nama_pendonor: row.nama_pendonor, 
         jenis_kelamin: row.jenis_kelamin, 
@@ -65,8 +67,7 @@ export default function Pendonor() {
       if (editId) {
         await axios.put(`${API_URL}/${editId}`, formData);
       } else {
-        const newId = `P00${Math.floor(Math.random() * 1000)}`;
-        await axios.post(API_URL, { id_pendonor: newId, ...formData });
+        await axios.post(API_URL, formData);
       }
       fetchData();
       handleCloseModal();
@@ -76,15 +77,15 @@ export default function Pendonor() {
     }
   };
   
-  const handleDelete = async (id) => {
-    if(window.confirm('Hapus pendonor ini?')) {
-      try {
-        await axios.delete(`${API_URL}/${id}`);
-        fetchData();
-      } catch (err) {
-        console.error('Error deleting data:', err);
-        alert('Gagal menghapus data');
-      }
+  const handleDelete = async () => {
+    if (!deleteModal.id) return;
+    try {
+      await axios.delete(`${API_URL}/${deleteModal.id}`);
+      fetchData();
+      setDeleteModal({ isOpen: false, id: null });
+    } catch (err) {
+      console.error('Error deleting data:', err);
+      alert('Gagal menghapus data');
     }
   };
 
@@ -100,9 +101,6 @@ export default function Pendonor() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={18} /> Tambah Pendonor
-          </button>
         </div>
         <table className="table">
           <thead>
@@ -118,8 +116,8 @@ export default function Pendonor() {
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id_pendonor}>
-                <td>{row.id_pendonor}</td>
+              <tr key={row._id}>
+                <td>{row.id_user || row._id}</td>
                 <td>{row.nama_pendonor}</td>
                 <td>{row.jenis_kelamin}</td>
                 <td>{row.no_telepon}</td>
@@ -136,11 +134,11 @@ export default function Pendonor() {
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link to={`/pendonor/${row.id_pendonor}`} className="btn-icon" title="Lihat Detail">
+                    <Link to={`/pendonor/${row._id}`} className="btn-icon" title="Lihat Detail">
                       <Eye size={18} />
                     </Link>
                     <button className="btn-icon" title="Edit" onClick={() => handleOpenModal(row)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_pendonor)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => setDeleteModal({ isOpen: true, id: row._id })}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -228,6 +226,30 @@ export default function Pendonor() {
                 <button type="submit" className="btn btn-primary">Simpan</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteModal.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Konfirmasi Hapus</h3>
+              <button className="btn-icon" onClick={() => setDeleteModal({ isOpen: false, id: null })}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '20px 0' }}>
+              <Trash2 size={48} color="var(--danger)" style={{ margin: '0 auto 16px', display: 'block' }} />
+              <p style={{ margin: 0, fontSize: '16px', color: 'var(--text)' }}>
+                Apakah Anda yakin ingin menghapus data pendonor ini?
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
+                Data yang dihapus tidak dapat dikembalikan beserta riwayatnya.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteModal({ isOpen: false, id: null })}>Tidak, Batal</button>
+              <button type="button" className="btn btn-primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>Ya, Hapus</button>
+            </div>
           </div>
         </div>
       )}

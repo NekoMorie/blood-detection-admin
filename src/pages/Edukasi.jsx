@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import ImageModal from '../components/ImageModal';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient as axios } from '../api/darah';
 
 const API_URL = 'http://localhost:5000/edukasi';
 
@@ -11,6 +11,7 @@ export default function Edukasi() {
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -38,15 +39,15 @@ export default function Edukasi() {
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleDelete = async (id) => {
-    if(window.confirm('Hapus artikel ini?')) {
-      try {
-        await axios.delete(`${API_URL}/${id}`);
-        fetchData();
-      } catch (err) {
-        console.error('Error deleting data:', err);
-        alert('Gagal menghapus data');
-      }
+  const handleDelete = async () => {
+    if (!deleteModal.id) return;
+    try {
+      await axios.delete(`${API_URL}/${deleteModal.id}`);
+      fetchData();
+      setDeleteModal({ isOpen: false, id: null });
+    } catch (err) {
+      console.error('Error deleting data:', err);
+      alert('Gagal menghapus data');
     }
   };
 
@@ -78,7 +79,7 @@ export default function Edukasi() {
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id_edukasi}>
+              <tr key={row._id}>
                 <td>
                   {row.gambar ? (
                     <img 
@@ -104,8 +105,8 @@ export default function Edukasi() {
                 <td>{row.id_admin}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn-icon" title="Edit" onClick={() => navigate(`/edukasi/edit/${row.id_edukasi}`)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_edukasi)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" title="Edit" onClick={() => navigate(`/edukasi/edit/${row._id}`)}><Edit size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => setDeleteModal({ isOpen: true, id: row._id })}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -129,6 +130,30 @@ export default function Edukasi() {
       </div>
       
       <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
+
+      {deleteModal.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Konfirmasi Hapus</h3>
+              <button className="btn-icon" onClick={() => setDeleteModal({ isOpen: false, id: null })}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '20px 0' }}>
+              <Trash2 size={48} color="var(--danger)" style={{ margin: '0 auto 16px', display: 'block' }} />
+              <p style={{ margin: 0, fontSize: '16px', color: 'var(--text)' }}>
+                Apakah Anda yakin ingin menghapus artikel edukasi ini?
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
+                Data yang dihapus tidak dapat dikembalikan.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteModal({ isOpen: false, id: null })}>Tidak, Batal</button>
+              <button type="button" className="btn btn-primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>Ya, Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,15 +2,21 @@ import { useState, useEffect } from 'react';
 import { Eye, CheckCircle, Clock, Plus, Edit, Trash2, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { apiClient as axios } from '../api/darah';
+import Select from 'react-select';
 
 const API_URL = 'http://localhost:5000/pemeriksaan';
 
 export default function Pemeriksaan() {
   const [searchTerm, setSearchTerm] = useState('');
   const [data, setData] = useState([]);
+  const [admins, setAdmins] = useState([]);
+  const [pendonors, setPendonors] = useState([]);
+  const [alats, setAlats] = useState([]);
+  const [hasils, setHasils] = useState([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ id_pendonor: '', nama_pendonor: '', id_admin: 'admin', tanggal_pemeriksaan: '', status: 'Proses', nama_alat: '' });
 
@@ -25,6 +31,18 @@ export default function Pemeriksaan() {
     try {
       const res = await axios.get(API_URL);
       setData(res.data);
+      
+      const adminRes = await axios.get('http://localhost:5000/admin');
+      setAdmins(adminRes.data);
+      
+      const pendonorRes = await axios.get('http://localhost:5000/pendonor');
+      setPendonors(pendonorRes.data);
+      
+      const alatRes = await axios.get('http://localhost:5000/alat');
+      setAlats(alatRes.data);
+      
+      const hasilRes = await axios.get('http://localhost:5000/hasil');
+      setHasils(hasilRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
     }
@@ -38,9 +56,37 @@ export default function Pemeriksaan() {
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  const getAdminUsername = (adminId) => {
+    const admin = admins.find(a => a._id === adminId);
+    return admin ? admin.username : adminId;
+  };
+
+  const getPendonorIdUser = (pendonorId) => {
+    const pendonor = pendonors.find(p => p._id === pendonorId);
+    return pendonor ? (pendonor.id_user || pendonorId) : pendonorId;
+  };
+
+  const getGolonganDarah = (pemeriksaanId) => {
+    const hasil = hasils.find(h => h.id_pemeriksaan === pemeriksaanId);
+    return (hasil && hasil.golongan_darah) ? hasil.golongan_darah : '-';
+  };
+
+  const pendonorOptions = pendonors
+    .filter(p => p.status_verifikasi === 'Terverifikasi')
+    .map(p => ({
+      value: p._id,
+      label: `${p.id_user || p._id} - ${p.nama_pendonor}`,
+      nama: p.nama_pendonor
+    }));
+
+  const alatOptions = alats.map(a => ({
+    value: a.nama_alat,
+    label: a.nama_alat
+  }));
+
   const handleOpenModal = (row = null) => {
     if (row) {
-      setEditId(row.id_pemeriksaan);
+      setEditId(row._id);
       setFormData({ 
         id_pendonor: row.id_pendonor, 
         nama_pendonor: row.nama_pendonor, 
@@ -51,7 +97,16 @@ export default function Pemeriksaan() {
       });
     } else {
       setEditId(null);
-      setFormData({ id_pendonor: '', nama_pendonor: '', id_admin: 'admin', tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), status: 'Proses', nama_alat: '' });
+      const adminStr = localStorage.getItem('logged_in_admin');
+      const loggedInAdmin = adminStr ? JSON.parse(adminStr) : null;
+      setFormData({ 
+        id_pendonor: '', 
+        nama_pendonor: '', 
+        id_admin: loggedInAdmin ? loggedInAdmin._id : 'admin', 
+        tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 
+        status: 'Proses', 
+        nama_alat: '' 
+      });
     }
     setIsModalOpen(true);
   };
@@ -67,8 +122,7 @@ export default function Pemeriksaan() {
       if (editId) {
         await axios.put(`${API_URL}/${editId}`, formData);
       } else {
-        const newId = `PM00${Math.floor(Math.random() * 1000)}`;
-        await axios.post(API_URL, { id_pemeriksaan: newId, ...formData });
+        await axios.post(API_URL, formData);
       }
       fetchData();
       handleCloseModal();
@@ -78,15 +132,15 @@ export default function Pemeriksaan() {
     }
   };
   
-  const handleDelete = async (id) => {
-    if(window.confirm('Hapus pemeriksaan ini?')) {
-      try {
-        await axios.delete(`${API_URL}/${id}`);
-        fetchData();
-      } catch (err) {
-        console.error('Error deleting data:', err);
-        alert('Gagal menghapus data');
-      }
+  const handleDelete = async () => {
+    if (!deleteModal.id) return;
+    try {
+      await axios.delete(`${API_URL}/${deleteModal.id}`);
+      fetchData();
+      setDeleteModal({ isOpen: false, id: null });
+    } catch (err) {
+      console.error('Error deleting data:', err);
+      alert('Gagal menghapus data');
     }
   };
 
@@ -113,20 +167,26 @@ export default function Pemeriksaan() {
               <th>Nama Alat</th>
               <th>Tanggal</th>
               <th>Admin Pemeriksa</th>
+              <th>Golongan Darah</th>
               <th>Status</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id_pemeriksaan}>
+              <tr key={row._id}>
                 <td>
                   <div style={{ fontWeight: 600 }}>{row.nama_pendonor}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.id_pendonor}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{getPendonorIdUser(row.id_pendonor)}</div>
                 </td>
                 <td>{row.nama_alat}</td>
                 <td>{row.tanggal_pemeriksaan}</td>
-                <td>{row.id_admin}</td>
+                <td>{getAdminUsername(row.id_admin)}</td>
+                <td>
+                  <span className={`badge ${getGolonganDarah(row._id) === '-' ? 'badge-secondary' : 'badge-primary'}`} style={{ fontSize: '13px', padding: '4px 8px' }}>
+                    {getGolonganDarah(row._id)}
+                  </span>
+                </td>
                 <td>
                   <span className={`badge ${row.status === 'Selesai' ? 'badge-success' : 'badge-warning'}`}>
                     {row.status === 'Selesai' ? <CheckCircle size={14} /> : <Clock size={14} />}
@@ -139,7 +199,7 @@ export default function Pemeriksaan() {
                       <Eye size={18} />
                     </Link>
                     <button className="btn-icon" title="Edit" onClick={() => handleOpenModal(row)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_pemeriksaan)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => setDeleteModal({ isOpen: true, id: row._id })}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -164,48 +224,27 @@ export default function Pemeriksaan() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                <div className="grid-cols-2">
-                  <div className="form-group">
-                    <label className="form-label">ID Pendonor</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      value={formData.id_pendonor} 
-                      onChange={(e) => setFormData({...formData, id_pendonor: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Nama Pendonor</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      value={formData.nama_pendonor} 
-                      onChange={(e) => setFormData({...formData, nama_pendonor: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
                 <div className="form-group">
-                  <label className="form-label">Nama Alat</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    value={formData.nama_alat} 
-                    onChange={(e) => setFormData({...formData, nama_alat: e.target.value})}
+                  <label className="form-label">Pendonor</label>
+                  <Select 
+                    options={pendonorOptions}
+                    value={pendonorOptions.find(o => o.value === formData.id_pendonor) || null}
+                    onChange={(selected) => setFormData({...formData, id_pendonor: selected ? selected.value : '', nama_pendonor: selected ? selected.nama : ''})}
+                    placeholder="Cari dan pilih Pendonor..."
+                    isClearable
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select 
-                    className="form-control"
-                    value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  >
-                    <option value="Proses">Proses</option>
-                    <option value="Selesai">Selesai</option>
-                  </select>
+                  <label className="form-label">Nama Alat</label>
+                  <Select 
+                    options={alatOptions}
+                    value={alatOptions.find(o => o.value === formData.nama_alat) || null}
+                    onChange={(selected) => setFormData({...formData, nama_alat: selected ? selected.value : ''})}
+                    placeholder="Pilih Alat Deteksi..."
+                    isClearable
+                    required
+                  />
                 </div>
               </div>
               <div className="modal-footer">
@@ -213,6 +252,30 @@ export default function Pemeriksaan() {
                 <button type="submit" className="btn btn-primary">Simpan</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteModal.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Konfirmasi Hapus</h3>
+              <button className="btn-icon" onClick={() => setDeleteModal({ isOpen: false, id: null })}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '20px 0' }}>
+              <Trash2 size={48} color="var(--danger)" style={{ margin: '0 auto 16px', display: 'block' }} />
+              <p style={{ margin: 0, fontSize: '16px', color: 'var(--text)' }}>
+                Apakah Anda yakin ingin menghapus data pemeriksaan ini?
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
+                Data yang dihapus tidak dapat dikembalikan.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteModal({ isOpen: false, id: null })}>Tidak, Batal</button>
+              <button type="button" className="btn btn-primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleDelete}>Ya, Hapus</button>
+            </div>
           </div>
         </div>
       )}
