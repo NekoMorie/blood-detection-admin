@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Pendonor from './pages/Pendonor';
 import PendonorDetail from './pages/PendonorDetail';
 import Pemeriksaan from './pages/Pemeriksaan';
+import PemeriksaanDetail from './pages/PemeriksaanDetail';
 import Alat from './pages/Alat';
 import Edukasi from './pages/Edukasi';
 import EdukasiForm from './pages/EdukasiForm';
@@ -42,6 +43,7 @@ function App() {
           <Route path="pendonor" element={<Pendonor />} />
           <Route path="pendonor/:id" element={<PendonorDetail />} />
           <Route path="pemeriksaan" element={<Pemeriksaan />} />
+          <Route path="pemeriksaan/:id" element={<PemeriksaanDetail />} />
           <Route path="alat" element={<Alat />} />
           <Route path="edukasi" element={<Edukasi />} />
           <Route path="edukasi/tambah" element={<EdukasiForm />} />

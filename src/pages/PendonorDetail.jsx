@@ -6,6 +6,7 @@ import axios from 'axios';
 export default function PendonorDetail() {
   const { id } = useParams();
   const [donorData, setDonorData] = useState(null);
+  const [alats, setAlats] = useState([]);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -16,8 +17,22 @@ export default function PendonorDetail() {
         console.error('Error fetching detail:', err);
       }
     };
+    const fetchAlats = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/alat`);
+        setAlats(res.data);
+      } catch (err) {
+        console.error('Error fetching alats:', err);
+      }
+    };
     fetchDetail();
+    fetchAlats();
   }, [id]);
+
+  const getAlatNama = (alatId) => {
+    const alat = alats.find(a => a._id === alatId);
+    return alat ? alat.nama_alat : alatId;
+  };
 
   if (!donorData) return <div style={{ padding: '24px' }}>Loading...</div>;
 
@@ -85,7 +100,7 @@ export default function PendonorDetail() {
                 </div>
                 <div className="info-item">
                   <span className="info-label">Alat Deteksi</span>
-                  <span className="info-value">{donorData.hasil?.id_alat || '-'}</span>
+                  <span className="info-value">{getAlatNama(donorData.hasil?.id_alat) || '-'}</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Nilai Sensor</span>

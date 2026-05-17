@@ -12,6 +12,7 @@ export default function Edukasi() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
+  const [admins, setAdmins] = useState([]);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -26,9 +27,17 @@ export default function Edukasi() {
     try {
       const res = await axios.get(API_URL);
       setData(res.data);
+      
+      const adminRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/admin`);
+      setAdmins(adminRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
     }
+  };
+
+  const getAdminUsername = (adminId) => {
+    const admin = admins.find(a => a._id === adminId);
+    return admin ? admin.username : adminId;
   };
 
   const filteredData = data.filter(d => 
@@ -102,7 +111,7 @@ export default function Edukasi() {
                   />
                 </td>
                 <td>{row.sumber}</td>
-                <td>{row.id_admin}</td>
+                <td>{getAdminUsername(row.id_admin)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn-icon" title="Edit" onClick={() => navigate(`/edukasi/edit/${row._id}`)}><Edit size={18} /></button>

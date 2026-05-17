@@ -104,7 +104,7 @@ export default function Pemeriksaan() {
         nama_pendonor: '', 
         id_admin: loggedInAdmin ? loggedInAdmin._id : 'admin', 
         tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 
-        status: 'Proses', 
+        status: 'Menunggu', 
         nama_alat: '' 
       });
     }
@@ -188,14 +188,14 @@ export default function Pemeriksaan() {
                   </span>
                 </td>
                 <td>
-                  <span className={`badge ${row.status === 'Selesai' ? 'badge-success' : 'badge-warning'}`}>
+                  <span className={`badge ${row.status === 'Selesai' ? 'badge-success' : row.status === 'Proses' ? 'badge-warning' : 'badge-secondary'}`}>
                     {row.status === 'Selesai' ? <CheckCircle size={14} /> : <Clock size={14} />}
                     {row.status}
                   </span>
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link to={`/pendonor/${row.id_pendonor}`} className="btn-icon" title="Lihat Hasil Pendonor">
+                    <Link to={`/pemeriksaan/${row._id}`} className="btn-icon" title="Lihat Detail Pemeriksaan">
                       <Eye size={18} />
                     </Link>
                     <button className="btn-icon" title="Edit" onClick={() => handleOpenModal(row)}><Edit size={18} /></button>
