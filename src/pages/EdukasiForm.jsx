@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import JoditEditor from 'jodit-react';
 import ImageModal from '../components/ImageModal';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/edukasi';
 
 export default function EdukasiForm() {
   const { id } = useParams();
@@ -14,71 +17,60 @@ export default function EdukasiForm() {
   const [formData, setFormData] = useState({
     judul: '',
     sumber: '',
-    isi: '',
-    admin: 'admin',
-    image: ''
+    isi_materi: '',
+    id_admin: 'admin',
+    gambar: ''
   });
 
   useEffect(() => {
-    // If editing, load data from localStorage
     if (id) {
-      const storedData = localStorage.getItem('edukasi_data');
-      if (storedData) {
-        const parsed = JSON.parse(storedData);
-        const item = parsed.find(d => d.id === id);
-        if (item) {
-          setFormData({
-            judul: item.judul,
-            sumber: item.sumber,
-            isi: item.isi,
-            admin: item.admin,
-            image: item.image || ''
-          });
-        }
-      }
+      fetchData();
     }
   }, [id]);
+
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      const item = res.data.find(d => d.id_edukasi === id);
+      if (item) {
+        setFormData({
+          judul: item.judul || '',
+          sumber: item.sumber || '',
+          isi_materi: item.isi_materi || '',
+          id_admin: item.id_admin || 'admin',
+          gambar: item.gambar || ''
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
+        setFormData({ ...formData, gambar: reader.result });
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Load current data
-    const storedData = localStorage.getItem('edukasi_data');
-    let currentData = [];
-    if (storedData) {
-      currentData = JSON.parse(storedData);
-    } else {
-      currentData = [
-        { id: 'E001', admin: 'admin', judul: 'Manfaat Donor Darah', isi: 'Donor darah sangat bermanfaat bagi kesehatan...', sumber: 'Kemenkes RI' },
-        { id: 'E002', admin: 'budistaff', judul: 'Syarat Donor Darah', isi: 'Sebelum donor, pastikan berat badan...', sumber: 'PMI' }
-      ];
+    try {
+      if (id) {
+        await axios.put(`${API_URL}/${id}`, formData);
+      } else {
+        const newId = `E00${Math.floor(Math.random() * 1000)}`;
+        await axios.post(API_URL, { id_edukasi: newId, ...formData });
+      }
+      navigate('/edukasi');
+    } catch (err) {
+      console.error('Error saving data:', err);
+      alert('Gagal menyimpan data edukasi');
     }
-
-    if (id) {
-      // Edit
-      currentData = currentData.map(d => d.id === id ? { ...d, ...formData } : d);
-    } else {
-      // Add
-      const newId = `E00${Math.floor(Math.random() * 1000)}`;
-      currentData.push({ id: newId, ...formData });
-    }
-
-    // Save back to localStorage
-    localStorage.setItem('edukasi_data', JSON.stringify(currentData));
-    
-    // Navigate back
-    navigate('/edukasi');
   };
 
   const config = {
@@ -107,12 +99,12 @@ export default function EdukasiForm() {
               onChange={handleImageChange}
               style={{ marginBottom: '12px' }}
             />
-            {formData.image && (
+            {formData.gambar && (
               <div 
                 style={{ marginTop: '12px', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', display: 'inline-block', cursor: 'pointer' }}
-                onClick={() => setSelectedImage(formData.image)}
+                onClick={() => setSelectedImage(formData.gambar)}
               >
-                <img src={formData.image} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+                <img src={formData.gambar} alt="Preview" style={{ maxHeight: '200px', maxWidth: '100%', objectFit: 'contain', borderRadius: '4px' }} />
               </div>
             )}
           </div>
@@ -144,10 +136,10 @@ export default function EdukasiForm() {
             <label className="form-label">Isi / Deskripsi</label>
             <JoditEditor
               ref={editor}
-              value={formData.isi}
+              value={formData.isi_materi}
               config={config}
-              tabIndex={1} // tabIndex of textarea
-              onBlur={newContent => setFormData({...formData, isi: newContent})}
+              tabIndex={1}
+              onBlur={newContent => setFormData({...formData, isi_materi: newContent})}
               onChange={newContent => {}}
             />
           </div>

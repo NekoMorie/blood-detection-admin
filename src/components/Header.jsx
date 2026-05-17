@@ -33,8 +33,13 @@ export default function Header() {
   }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('logged_in_admin');
     navigate('/login');
   };
+
+  const adminStr = localStorage.getItem('logged_in_admin');
+  const admin = adminStr ? JSON.parse(adminStr) : { nama_admin: 'Admin Utama', username: 'admin' };
 
   return (
     <header className="header">
@@ -47,10 +52,10 @@ export default function Header() {
         
         <div className="dropdown-container" ref={dropdownRef}>
           <div className="user-profile" onClick={() => setDropdownOpen(!dropdownOpen)}>
-            <div className="avatar">AD</div>
+            <div className="avatar">{(admin.nama_admin || 'A').substring(0, 2).toUpperCase()}</div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--secondary)' }}>Admin Utama</span>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Superadmin</span>
+              <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--secondary)' }}>{admin.nama_admin || admin.username}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Admin</span>
             </div>
           </div>
           

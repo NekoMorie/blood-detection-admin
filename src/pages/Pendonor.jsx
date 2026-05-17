@@ -1,40 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, CheckCircle, XCircle, Plus, Edit, Trash2, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
-const initialData = [
-  { id: 'P001', nama: 'Budi Santoso', jk: 'Laki-laki', telepon: '081234567890', email: 'budi@gmail.com', status: 'Terverifikasi' },
-  { id: 'P002', nama: 'Siti Aminah', jk: 'Perempuan', telepon: '081298765432', email: 'siti@gmail.com', status: 'Belum Verifikasi' },
-  { id: 'P003', nama: 'Andi Wijaya', jk: 'Laki-laki', telepon: '085612345678', email: 'andi@gmail.com', status: 'Terverifikasi' },
-  { id: 'P004', nama: 'Rina Marlina', jk: 'Perempuan', telepon: '087812349876', email: 'rina@gmail.com', status: 'Ditolak' },
-];
+const API_URL = 'http://localhost:5000/pendonor';
 
 export default function Pendonor() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [formData, setFormData] = useState({ nama: '', jk: 'Laki-laki', telepon: '', email: '', status: 'Belum Verifikasi' });
+  const [formData, setFormData] = useState({ nama_pendonor: '', jenis_kelamin: 'Laki-laki', no_telepon: '', email: '', status_verifikasi: 'Belum Verifikasi' });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      setData(res.data);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
+
   const filteredData = data.filter(d => 
-    d.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.id.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.nama_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (d.id_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleOpenModal = (row = null) => {
     if (row) {
-      setEditId(row.id);
-      setFormData({ nama: row.nama, jk: row.jk, telepon: row.telepon, email: row.email, status: row.status });
+      setEditId(row.id_pendonor);
+      setFormData({ 
+        nama_pendonor: row.nama_pendonor, 
+        jenis_kelamin: row.jenis_kelamin, 
+        no_telepon: row.no_telepon, 
+        email: row.email, 
+        status_verifikasi: row.status_verifikasi 
+      });
     } else {
       setEditId(null);
-      setFormData({ nama: '', jk: 'Laki-laki', telepon: '', email: '', status: 'Belum Verifikasi' });
+      setFormData({ nama_pendonor: '', jenis_kelamin: 'Laki-laki', no_telepon: '', email: '', status_verifikasi: 'Belum Verifikasi' });
     }
     setIsModalOpen(true);
   };
@@ -44,20 +59,32 @@ export default function Pendonor() {
     setEditId(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editId) {
-      setData(data.map(d => d.id === editId ? { ...d, ...formData } : d));
-    } else {
-      const newId = `P00${Math.floor(Math.random() * 1000)}`;
-      setData([...data, { id: newId, ...formData }]);
+    try {
+      if (editId) {
+        await axios.put(`${API_URL}/${editId}`, formData);
+      } else {
+        const newId = `P00${Math.floor(Math.random() * 1000)}`;
+        await axios.post(API_URL, { id_pendonor: newId, ...formData });
+      }
+      fetchData();
+      handleCloseModal();
+    } catch (err) {
+      console.error('Error saving data:', err);
+      alert('Gagal menyimpan data');
     }
-    handleCloseModal();
   };
   
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if(window.confirm('Hapus pendonor ini?')) {
-      setData(data.filter(d => d.id !== id));
+      try {
+        await axios.delete(`${API_URL}/${id}`);
+        fetchData();
+      } catch (err) {
+        console.error('Error deleting data:', err);
+        alert('Gagal menghapus data');
+      }
     }
   };
 
@@ -91,29 +118,29 @@ export default function Pendonor() {
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id}>
-                <td>{row.id}</td>
-                <td>{row.nama}</td>
-                <td>{row.jk}</td>
-                <td>{row.telepon}</td>
+              <tr key={row.id_pendonor}>
+                <td>{row.id_pendonor}</td>
+                <td>{row.nama_pendonor}</td>
+                <td>{row.jenis_kelamin}</td>
+                <td>{row.no_telepon}</td>
                 <td>{row.email}</td>
                 <td>
                   <span className={`badge ${
-                    row.status === 'Terverifikasi' ? 'badge-success' : 
-                    row.status === 'Belum Verifikasi' ? 'badge-warning' : 'badge-danger'
+                    row.status_verifikasi === 'Terverifikasi' ? 'badge-success' : 
+                    row.status_verifikasi === 'Belum Verifikasi' ? 'badge-warning' : 'badge-danger'
                   }`}>
-                    {row.status === 'Terverifikasi' && <CheckCircle size={14} />}
-                    {row.status === 'Ditolak' && <XCircle size={14} />}
-                    {row.status}
+                    {row.status_verifikasi === 'Terverifikasi' && <CheckCircle size={14} />}
+                    {row.status_verifikasi === 'Ditolak' && <XCircle size={14} />}
+                    {row.status_verifikasi}
                   </span>
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link to={`/pendonor/${row.id}`} className="btn-icon" title="Lihat Detail">
+                    <Link to={`/pendonor/${row.id_pendonor}`} className="btn-icon" title="Lihat Detail">
                       <Eye size={18} />
                     </Link>
                     <button className="btn-icon" title="Edit" onClick={() => handleOpenModal(row)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_pendonor)}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -143,8 +170,8 @@ export default function Pendonor() {
                   <input 
                     type="text" 
                     className="form-control" 
-                    value={formData.nama} 
-                    onChange={(e) => setFormData({...formData, nama: e.target.value})}
+                    value={formData.nama_pendonor} 
+                    onChange={(e) => setFormData({...formData, nama_pendonor: e.target.value})}
                     required
                   />
                 </div>
@@ -153,8 +180,8 @@ export default function Pendonor() {
                     <label className="form-label">Jenis Kelamin</label>
                     <select 
                       className="form-control"
-                      value={formData.jk}
-                      onChange={(e) => setFormData({...formData, jk: e.target.value})}
+                      value={formData.jenis_kelamin}
+                      onChange={(e) => setFormData({...formData, jenis_kelamin: e.target.value})}
                     >
                       <option value="Laki-laki">Laki-laki</option>
                       <option value="Perempuan">Perempuan</option>
@@ -164,8 +191,8 @@ export default function Pendonor() {
                     <label className="form-label">Status</label>
                     <select 
                       className="form-control"
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
+                      value={formData.status_verifikasi}
+                      onChange={(e) => setFormData({...formData, status_verifikasi: e.target.value})}
                     >
                       <option value="Belum Verifikasi">Belum Verifikasi</option>
                       <option value="Terverifikasi">Terverifikasi</option>
@@ -179,8 +206,8 @@ export default function Pendonor() {
                     <input 
                       type="text" 
                       className="form-control" 
-                      value={formData.telepon} 
-                      onChange={(e) => setFormData({...formData, telepon: e.target.value})}
+                      value={formData.no_telepon} 
+                      onChange={(e) => setFormData({...formData, no_telepon: e.target.value})}
                       required
                     />
                   </div>

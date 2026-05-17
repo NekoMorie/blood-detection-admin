@@ -1,46 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, CheckCircle, Clock, Plus, Edit, Trash2, X } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/pemeriksaan';
 
 export default function Pemeriksaan() {
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [data, setData] = useState([
-    { id: 'PM001', id_pendonor: 'P001', nama_pendonor: 'Budi Santoso', id_admin: 'A001', tanggal: '15 Mei 2026', status: 'Selesai', nama_alat: 'BloodScanner V1' },
-    { id: 'PM002', id_pendonor: 'P002', nama_pendonor: 'Siti Aminah', id_admin: 'A001', tanggal: '16 Mei 2026', status: 'Proses', nama_alat: 'Smart Darah Detect' },
-    { id: 'PM003', id_pendonor: 'P003', nama_pendonor: 'Andi Wijaya', id_admin: 'A002', tanggal: '16 Mei 2026', status: 'Selesai', nama_alat: 'BloodScanner V1' },
-  ]);
+  const [data, setData] = useState([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [formData, setFormData] = useState({ id_pendonor: '', nama_pendonor: '', id_admin: 'A001', tanggal: '', status: 'Proses', nama_alat: '' });
+  const [formData, setFormData] = useState({ id_pendonor: '', nama_pendonor: '', id_admin: 'admin', tanggal_pemeriksaan: '', status: 'Proses', nama_alat: '' });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      setData(res.data);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
+
   const filteredData = data.filter(d => 
-    d.nama_alat.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.id_pendonor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.nama_pendonor.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.nama_alat || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (d.id_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.nama_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleOpenModal = (row = null) => {
     if (row) {
-      setEditId(row.id);
+      setEditId(row.id_pemeriksaan);
       setFormData({ 
         id_pendonor: row.id_pendonor, 
         nama_pendonor: row.nama_pendonor, 
         id_admin: row.id_admin, 
-        tanggal: row.tanggal, 
+        tanggal_pemeriksaan: row.tanggal_pemeriksaan, 
         status: row.status, 
         nama_alat: row.nama_alat 
       });
     } else {
       setEditId(null);
-      setFormData({ id_pendonor: '', nama_pendonor: '', id_admin: 'A001', tanggal: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), status: 'Proses', nama_alat: '' });
+      setFormData({ id_pendonor: '', nama_pendonor: '', id_admin: 'admin', tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), status: 'Proses', nama_alat: '' });
     }
     setIsModalOpen(true);
   };
@@ -50,20 +61,32 @@ export default function Pemeriksaan() {
     setEditId(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editId) {
-      setData(data.map(d => d.id === editId ? { ...d, ...formData } : d));
-    } else {
-      const newId = `PM00${Math.floor(Math.random() * 1000)}`;
-      setData([...data, { id: newId, ...formData }]);
+    try {
+      if (editId) {
+        await axios.put(`${API_URL}/${editId}`, formData);
+      } else {
+        const newId = `PM00${Math.floor(Math.random() * 1000)}`;
+        await axios.post(API_URL, { id_pemeriksaan: newId, ...formData });
+      }
+      fetchData();
+      handleCloseModal();
+    } catch (err) {
+      console.error('Error saving data:', err);
+      alert('Gagal menyimpan data');
     }
-    handleCloseModal();
   };
   
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if(window.confirm('Hapus pemeriksaan ini?')) {
-      setData(data.filter(d => d.id !== id));
+      try {
+        await axios.delete(`${API_URL}/${id}`);
+        fetchData();
+      } catch (err) {
+        console.error('Error deleting data:', err);
+        alert('Gagal menghapus data');
+      }
     }
   };
 
@@ -96,13 +119,13 @@ export default function Pemeriksaan() {
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id_pemeriksaan}>
                 <td>
                   <div style={{ fontWeight: 600 }}>{row.nama_pendonor}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.id_pendonor}</div>
                 </td>
                 <td>{row.nama_alat}</td>
-                <td>{row.tanggal}</td>
+                <td>{row.tanggal_pemeriksaan}</td>
                 <td>{row.id_admin}</td>
                 <td>
                   <span className={`badge ${row.status === 'Selesai' ? 'badge-success' : 'badge-warning'}`}>
@@ -116,7 +139,7 @@ export default function Pemeriksaan() {
                       <Eye size={18} />
                     </Link>
                     <button className="btn-icon" title="Edit" onClick={() => handleOpenModal(row)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_pemeriksaan)}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>

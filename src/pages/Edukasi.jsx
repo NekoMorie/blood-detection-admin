@@ -3,6 +3,9 @@ import { Plus, Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import ImageModal from '../components/ImageModal';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/edukasi';
 
 export default function Edukasi() {
   const navigate = useNavigate();
@@ -15,32 +18,35 @@ export default function Edukasi() {
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    const storedData = localStorage.getItem('edukasi_data');
-    if (storedData) {
-      setData(JSON.parse(storedData));
-    } else {
-      const initialData = [
-        { id: 'E001', admin: 'admin', judul: 'Manfaat Donor Darah', isi: 'Donor darah sangat bermanfaat bagi kesehatan...', sumber: 'Kemenkes RI' },
-        { id: 'E002', admin: 'budistaff', judul: 'Syarat Donor Darah', isi: 'Sebelum donor, pastikan berat badan...', sumber: 'PMI' },
-      ];
-      setData(initialData);
-      localStorage.setItem('edukasi_data', JSON.stringify(initialData));
-    }
+    fetchData();
   }, []);
 
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      setData(res.data);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
+
   const filteredData = data.filter(d => 
-    d.judul.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.isi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.sumber.toLowerCase().includes(searchTerm.toLowerCase())
+    (d.judul || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (d.isi_materi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.sumber || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if(window.confirm('Hapus artikel ini?')) {
-      const newData = data.filter(d => d.id !== id);
-      setData(newData);
-      localStorage.setItem('edukasi_data', JSON.stringify(newData));
+      try {
+        await axios.delete(`${API_URL}/${id}`);
+        fetchData();
+      } catch (err) {
+        console.error('Error deleting data:', err);
+        alert('Gagal menghapus data');
+      }
     }
   };
 
@@ -72,14 +78,14 @@ export default function Edukasi() {
           </thead>
           <tbody>
             {paginatedData.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id_edukasi}>
                 <td>
-                  {row.image ? (
+                  {row.gambar ? (
                     <img 
-                      src={row.image} 
+                      src={row.gambar} 
                       alt="" 
                       style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }} 
-                      onClick={() => setSelectedImage(row.image)}
+                      onClick={() => setSelectedImage(row.gambar)}
                     />
                   ) : (
                     <div style={{ width: '40px', height: '40px', background: 'var(--background)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -91,15 +97,15 @@ export default function Edukasi() {
                   <div style={{ fontWeight: 600 }}>{row.judul}</div>
                   <div 
                     style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}
-                    dangerouslySetInnerHTML={{ __html: row.isi }} 
+                    dangerouslySetInnerHTML={{ __html: row.isi_materi }} 
                   />
                 </td>
                 <td>{row.sumber}</td>
-                <td>{row.admin}</td>
+                <td>{row.id_admin}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn-icon" title="Edit" onClick={() => navigate(`/edukasi/edit/${row.id}`)}><Edit size={18} /></button>
-                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id)}><Trash2 size={18} /></button>
+                    <button className="btn-icon" title="Edit" onClick={() => navigate(`/edukasi/edit/${row.id_edukasi}`)}><Edit size={18} /></button>
+                    <button className="btn-icon" style={{ color: 'var(--danger)' }} title="Hapus" onClick={() => handleDelete(row.id_edukasi)}><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>

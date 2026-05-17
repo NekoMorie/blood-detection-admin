@@ -1,20 +1,32 @@
+import { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { Users, Droplet, CheckCircle, Activity } from 'lucide-react';
-
-const bloodTypeData = [
-  { name: 'A+', count: 120 },
-  { name: 'A-', count: 15 },
-  { name: 'B+', count: 150 },
-  { name: 'B-', count: 12 },
-  { name: 'AB+', count: 45 },
-  { name: 'AB-', count: 5 },
-  { name: 'O+', count: 200 },
-  { name: 'O-', count: 25 },
-];
+import axios from 'axios';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState({ totalPendonor: 0, verifiedPendonor: 0, totalPemeriksaan: 0, stokDarah: 0 });
+  const [bloodTypeData, setBloodTypeData] = useState([
+    { name: 'A+', count: 0 }, { name: 'A-', count: 0 },
+    { name: 'B+', count: 0 }, { name: 'B-', count: 0 },
+    { name: 'AB+', count: 0 }, { name: 'AB-', count: 0 },
+    { name: 'O+', count: 0 }, { name: 'O-', count: 0 },
+  ]);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/dashboard/stats');
+        setStats(res.data.stats);
+        setBloodTypeData(res.data.bloodTypeData);
+      } catch (err) {
+        console.error('Error fetching dashboard stats:', err);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
   return (
     <div>
       <div className="stats-grid">
@@ -24,7 +36,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-details">
             <h4>Total Pendonor</h4>
-            <h2>1,245</h2>
+            <h2>{stats.totalPendonor}</h2>
           </div>
         </div>
         <div className="card stat-card">
@@ -33,7 +45,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-details">
             <h4>Terverifikasi</h4>
-            <h2>1,102</h2>
+            <h2>{stats.verifiedPendonor}</h2>
           </div>
         </div>
         <div className="card stat-card">
@@ -42,7 +54,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-details">
             <h4>Total Pemeriksaan</h4>
-            <h2>3,450</h2>
+            <h2>{stats.totalPemeriksaan}</h2>
           </div>
         </div>
         <div className="card stat-card">
@@ -51,7 +63,7 @@ export default function Dashboard() {
           </div>
           <div className="stat-details">
             <h4>Stok Darah Terdeteksi</h4>
-            <h2>572 Kantong</h2>
+            <h2>{stats.stokDarah} Kantong</h2>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import axios from 'axios';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Pendonor from './pages/Pendonor';
@@ -9,6 +10,17 @@ import Edukasi from './pages/Edukasi';
 import EdukasiForm from './pages/EdukasiForm';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+
+// Axios global interceptor
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
 
 function App() {
   return (

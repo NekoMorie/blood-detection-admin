@@ -1,18 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Droplets } from 'lucide-react';
+import axios from 'axios';
 
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.username === 'admin' && formData.password === 'admin') {
-      navigate('/');
-    } else {
-      setError('Username atau password salah! (Coba admin/admin)');
+    try {
+      const res = await axios.post('http://localhost:5000/auth/admin/login', formData);
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('logged_in_admin', JSON.stringify(res.data.admin));
+        navigate('/');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Username atau password salah!');
     }
   };
 
