@@ -57,15 +57,7 @@ export default function Dashboard() {
             <h2>{stats.totalPemeriksaan}</h2>
           </div>
         </div>
-        <div className="card stat-card">
-          <div className="stat-icon info">
-            <Droplet size={28} />
-          </div>
-          <div className="stat-details">
-            <h4>Stok Darah Terdeteksi</h4>
-            <h2>{stats.stokDarah} Kantong</h2>
-          </div>
-        </div>
+
       </div>
 
       <div className="chart-container">

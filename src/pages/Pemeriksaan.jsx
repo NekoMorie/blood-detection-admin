@@ -68,7 +68,11 @@ export default function Pemeriksaan() {
 
   const getGolonganDarah = (pemeriksaanId) => {
     const hasil = hasils.find(h => h.id_pemeriksaan === pemeriksaanId);
-    return (hasil && hasil.golongan_darah) ? hasil.golongan_darah : '-';
+    if (!hasil || !hasil.golongan_darah || hasil.golongan_darah === '-') {
+      return '-';
+    }
+    const rhesusSym = hasil.rhesus === 'Positif' ? 'Rh+' : hasil.rhesus === 'Negatif' ? 'Rh-' : (hasil.rhesus === '-' ? '' : hasil.rhesus);
+    return rhesusSym ? `${hasil.golongan_darah} (${rhesusSym})` : hasil.golongan_darah;
   };
 
   const pendonorOptions = pendonors

@@ -25,7 +25,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <Droplet size={28} />
+          <img src="/logo.png" alt="logo" style={{ height: '28px' }} />
         </div>
         BloodCare
       </div>

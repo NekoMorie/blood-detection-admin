@@ -27,9 +27,7 @@ export default function Login() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div style={{ display: 'inline-flex', background: 'var(--primary-light)', color: 'var(--primary)', padding: '16px', borderRadius: 'var(--radius-full)' }}>
-            <Droplets size={32} />
-          </div>
+          <img src="/logo.png" alt="logo" style={{ height: '48px', marginBottom: '16px' }} />
           <h2>BloodCare Admin</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '8px' }}>
             Masuk untuk mengelola sistem deteksi darah
