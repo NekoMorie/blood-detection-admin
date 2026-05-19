@@ -35,7 +35,7 @@ export default function Dashboard() {
             <Users size={28} />
           </div>
           <div className="stat-details">
-            <h4>Total Pendonor</h4>
+            <h4>Total Pasien</h4>
             <h2>{stats.totalPendonor}</h2>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function Dashboard() {
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-md)' }}
               />
               <Legend />
-              <Bar dataKey="count" name="Jumlah Pendonor" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={40} />
+              <Bar dataKey="count" name="Jumlah Pasien" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </div>

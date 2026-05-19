@@ -96,7 +96,7 @@ export default function Pendonor() {
           <div className="search-box" style={{ background: 'var(--background)' }}>
             <input 
               type="text" 
-              placeholder="Cari ID atau Nama Pendonor..." 
+              placeholder="Cari ID atau Nama Pasien..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -105,8 +105,8 @@ export default function Pendonor() {
         <table className="table">
           <thead>
             <tr>
-              <th>ID Pendonor</th>
-              <th>Nama Pendonor</th>
+              <th>ID Pasien</th>
+              <th>Nama Pasien</th>
               <th>Jenis Kelamin</th>
               <th>No Telepon</th>
               <th>Email</th>
@@ -158,13 +158,13 @@ export default function Pendonor() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3 className="modal-title">{editId ? 'Edit Pendonor' : 'Tambah Pendonor'}</h3>
+              <h3 className="modal-title">{editId ? 'Edit Pasien' : 'Tambah Pasien'}</h3>
               <button className="btn-icon" onClick={handleCloseModal}><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Nama Pendonor</label>
+                  <label className="form-label">Nama Pasien</label>
                   <input 
                     type="text" 
                     className="form-control" 

@@ -225,12 +225,12 @@ export default function PemeriksaanDetail() {
         </div>
 
         <div className="detail-card">
-          <h3 className="chart-title" style={{ marginBottom: '24px' }}>Informasi Pendonor</h3>
+          <h3 className="chart-title" style={{ marginBottom: '24px' }}>Informasi Pasien</h3>
           
           {pendonor ? (
             <div className="info-list grid-cols-2">
               <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Nama Pendonor</span>
+                <span className="info-label">Nama Pasien</span>
                 <span className="info-value" style={{ fontSize: '16px' }}>{pendonor.nama_pendonor}</span>
               </div>
               <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>

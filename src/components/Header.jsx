@@ -11,13 +11,13 @@ export default function Header() {
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/': return 'Dashboard Overview';
-      case '/pendonor': return 'Data Pendonor';
+      case '/pendonor': return 'Data Pasien';
       case '/pemeriksaan': return 'Data Pemeriksaan';
       case '/alat': return 'Manajemen Alat Deteksi';
       case '/edukasi': return 'Konten Edukasi';
       case '/admin': return 'Manajemen Admin';
       default:
-        if (location.pathname.startsWith('/pendonor/')) return 'Detail Pendonor';
+        if (location.pathname.startsWith('/pendonor/')) return 'Detail Pasien';
         return 'BloodCare System';
     }
   };

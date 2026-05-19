@@ -155,7 +155,7 @@ export default function Pemeriksaan() {
           <div className="search-box" style={{ width: '400px' }}>
             <input 
               type="text" 
-              placeholder="Cari berdasarkan ID User (Pendonor) atau Nama Alat..." 
+              placeholder="Cari berdasarkan ID User (Pasien) atau Nama Alat..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -167,7 +167,7 @@ export default function Pemeriksaan() {
         <table className="table">
           <thead>
             <tr>
-              <th>Pendonor</th>
+              <th>Pasien</th>
               <th>Nama Alat</th>
               <th>Tanggal</th>
               <th>Admin Pemeriksa</th>
@@ -229,12 +229,12 @@ export default function Pemeriksaan() {
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Pendonor</label>
+                  <label className="form-label">Pasien</label>
                   <Select 
                     options={pendonorOptions}
                     value={pendonorOptions.find(o => o.value === formData.id_pendonor) || null}
                     onChange={(selected) => setFormData({...formData, id_pendonor: selected ? selected.value : '', nama_pendonor: selected ? selected.nama : ''})}
-                    placeholder="Cari dan pilih Pendonor..."
+                    placeholder="Cari dan pilih Pasien..."
                     isClearable
                     required
                   />

@@ -14,7 +14,7 @@ export default function Sidebar() {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/pendonor', label: 'Data Pendonor', icon: <Users size={20} /> },
+    { path: '/pendonor', label: 'Data Pasien', icon: <Users size={20} /> },
     { path: '/pemeriksaan', label: 'Pemeriksaan', icon: <Activity size={20} /> },
     { path: '/alat', label: 'Alat Deteksi', icon: <Stethoscope size={20} /> },
     { path: '/edukasi', label: 'Edukasi', icon: <BookOpen size={20} /> },

@@ -58,7 +58,7 @@ export default function PendonorDetail() {
           
           <div className="info-list">
             <div className="info-item">
-              <span className="info-label">ID Pendonor</span>
+              <span className="info-label">ID Pasien</span>
               <span className="info-value">{donorData.id_pendonor}</span>
             </div>
             <div className="info-item">
@@ -90,7 +90,12 @@ export default function PendonorDetail() {
               <div style={{ background: 'var(--primary-light)', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                 <div style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 600 }}>Golongan Darah</div>
                 <div style={{ fontSize: '48px', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>
-                  {donorData.hasil?.golongan_darah || '-'} <span style={{ fontSize: '24px' }}>{donorData.hasil?.rhesus === 'Positif' ? '+' : donorData.hasil?.rhesus === 'Negatif' ? '-' : ''}</span>
+                  {(() => {
+                    const result = donorData.hasil || {};
+                    if (!result.golongan_darah) return '-';
+                    const rh = result.rhesus === 'Positif' ? 'Rh+' : result.rhesus === 'Negatif' ? 'Rh-' : '';
+                    return rh ? `${result.golongan_darah} (${rh})` : result.golongan_darah;
+                  })()}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
