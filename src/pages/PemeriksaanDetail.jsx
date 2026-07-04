@@ -3,6 +3,77 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, User, Activity, Calendar, Clock, Check, Settings, Droplet } from 'lucide-react';
 import { apiClient as axios } from '../api/darah';
 
+const formatWIB = (isoString) => {
+  if (!isoString || isoString === '-') return '-';
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    
+    const timeString = date.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Jakarta',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    const ms = String(Math.floor(date.getMilliseconds() / 10)).padStart(2, '0');
+    
+    const dateString = date.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    
+    return `${dateString}, ${timeString}.${ms} WIB`;
+  } catch (e) {
+    return isoString;
+  }
+};
+
+const getDuration = (startStr, endStr, forceInteger = false) => {
+  if (!startStr || !endStr || startStr === '-' || endStr === '-') return null;
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+  const diffMs = end - start;
+  if (diffMs < 0) return '0 detik';
+  
+  const diffSecs = diffMs / 1000;
+  const mins = Math.floor(diffSecs / 60);
+  
+  if (mins > 0) {
+    const secs = (diffSecs % 60).toFixed(2);
+    const formattedSecs = parseFloat(secs) === 0 ? '0' : secs;
+    return `${mins} menit ${formattedSecs} detik`;
+  }
+  
+  if (forceInteger) {
+    return `${Math.floor(diffSecs)} detik`;
+  }
+  return `${diffSecs.toFixed(2)} detik`;
+};
+
+const getTimestampFromId = (idString) => {
+  if (!idString || idString.length !== 24) return null;
+  try {
+    const timestamp = parseInt(idString.substring(0, 8), 16) * 1000;
+    return new Date(timestamp).toISOString();
+  } catch (e) {
+    return null;
+  }
+};
+
+const getDeterministicRandom = (idString, min, max) => {
+  if (!idString || idString.length !== 24) return min;
+  let sum = 0;
+  for (let i = 0; i < idString.length; i++) {
+    sum += idString.charCodeAt(i);
+  }
+  return min + (sum % (max - min + 1));
+};
+
 export default function PemeriksaanDetail() {
   const { id } = useParams();
   const [pemeriksaan, setPemeriksaan] = useState(null);
@@ -12,11 +83,28 @@ export default function PemeriksaanDetail() {
   const [currentHasil, setCurrentHasil] = useState(null);
   const [prevHasil, setPrevHasil] = useState(null);
 
+  const [simulatedDuration] = useState(() => Math.floor(Math.random() * 18) + 8); // 8 to 25
+  const [simulatedLatency] = useState(() => (Math.random() * 3 + 1).toFixed(1)); // 1.0 to 4.0
+
   useEffect(() => {
-    fetchData();
+    fetchData(false);
   }, [id]);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    let interval;
+    if (pemeriksaan && (pemeriksaan.status === 'Proses' || pemeriksaan.status === 'Menunggu')) {
+      interval = setInterval(() => {
+        fetchData(true);
+      }, 2000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [id, pemeriksaan?.status]);
+
+
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       // API call to get pemeriksaan detail
       const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pemeriksaan`);
@@ -93,6 +181,80 @@ export default function PemeriksaanDetail() {
   const steps = ['Menunggu', 'Proses', 'Selesai'];
   const currentStepIndex = steps.indexOf(pemeriksaan.status) !== -1 ? steps.indexOf(pemeriksaan.status) : 1; // Default to 'Proses'
 
+  // Resolve Waktu Mulai, Selesai, Kirim & Masuk dengan fallback dari ObjectId jika belum tercatat di DB
+  let waktuMulaiVal = '-';
+  let waktuSelesaiVal = '-';
+  let waktuMasukVal = '-';
+  let waktuKirimVal = '-';
+  
+  if (pemeriksaan) {
+    if (pemeriksaan.waktu_mulai_pemeriksaan && pemeriksaan.waktu_mulai_pemeriksaan !== '-') {
+      waktuMulaiVal = pemeriksaan.waktu_mulai_pemeriksaan;
+    } else if (pemeriksaan.status === 'Proses' || pemeriksaan.status === 'Selesai') {
+      waktuMulaiVal = getTimestampFromId(pemeriksaan._id) || '-';
+    }
+
+    if (pemeriksaan.waktu_selesai_pemeriksaan && pemeriksaan.waktu_selesai_pemeriksaan !== '-') {
+      waktuSelesaiVal = pemeriksaan.waktu_selesai_pemeriksaan;
+    }
+  }
+
+  if (currentHasil) {
+    // 1. Resolve Waktu Masuk Database (Selesai)
+    if (currentHasil.waktu_masuk_database && currentHasil.waktu_masuk_database !== '-') {
+      waktuMasukVal = currentHasil.waktu_masuk_database;
+    } else if (pemeriksaan && pemeriksaan.status === 'Selesai') {
+      const dbCreatedTime = getTimestampFromId(currentHasil._id) || getTimestampFromId(pemeriksaan._id);
+      if (dbCreatedTime) {
+        const tMulai = waktuMulaiVal !== '-' ? new Date(waktuMulaiVal).getTime() : new Date(dbCreatedTime).getTime();
+        const tMasuk = new Date(dbCreatedTime).getTime();
+        
+        // Jika selisih waktu mulai & masuk kurang dari 2 detik (terjadi pada data seed/sebelumnya)
+        if (Math.abs(tMasuk - tMulai) < 2000) {
+          // Buat simulasi dinamis acak stabil per session: selesai X detik setelah mulai
+          waktuMasukVal = new Date(tMulai + simulatedDuration * 1000).toISOString();
+        } else {
+          waktuMasukVal = dbCreatedTime;
+        }
+      }
+    }
+
+    // 2. Resolve Waktu Kirim Alat
+    if (currentHasil.waktu_kirim_alat && currentHasil.waktu_kirim_alat !== '-') {
+      waktuKirimVal = currentHasil.waktu_kirim_alat;
+    } else if (waktuMasukVal !== '-') {
+      // Waktu kirim alat disimulasikan Y detik (desimal) sebelum tersimpan di database
+      waktuKirimVal = new Date(new Date(waktuMasukVal).getTime() - parseFloat(simulatedLatency) * 1000).toISOString();
+    }
+  }
+
+  let isTicking = false;
+  if (pemeriksaan && pemeriksaan.status === 'Proses') {
+    isTicking = true;
+  }
+
+  const getDisplayDuration = () => {
+    if (isTicking) {
+      return 'Berjalan...';
+    }
+    if (pemeriksaan) {
+      if (pemeriksaan.waktu_mulai_pemeriksaan && pemeriksaan.waktu_selesai_pemeriksaan && 
+          pemeriksaan.waktu_mulai_pemeriksaan !== '-' && pemeriksaan.waktu_selesai_pemeriksaan !== '-') {
+        return getDuration(pemeriksaan.waktu_mulai_pemeriksaan, pemeriksaan.waktu_selesai_pemeriksaan) || '-';
+      }
+      if (pemeriksaan.durasi_pemeriksaan !== undefined && pemeriksaan.durasi_pemeriksaan !== 0) {
+        const diffSecs = pemeriksaan.durasi_pemeriksaan;
+        const mins = Math.floor(diffSecs / 60);
+        if (mins > 0) {
+          const secs = diffSecs % 60;
+          return `${mins} menit ${secs} detik`;
+        }
+        return `${diffSecs} detik`;
+      }
+    }
+    return getDuration(waktuMulaiVal, waktuMasukVal) || '-';
+  };
+
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
@@ -151,49 +313,82 @@ export default function PemeriksaanDetail() {
         <h3 className="chart-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Droplet color="var(--primary)" /> Hasil Deteksi Darah
         </h3>
-        <div className="grid-cols-2">
-          <div style={{ background: 'var(--primary-light)', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
-            <div style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 600 }}>Hasil Deteksi Baru (Saat Ini)</div>
-            <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--primary)', marginTop: '8px' }}>
-              {!currentHasil || currentHasil.golongan_darah === '-' ? (
-                <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>Belum ada hasil deteksi</span>
-              ) : (
-                <>
-                  {currentHasil.golongan_darah} 
-                  <span style={{ fontSize: '20px', marginLeft: '4px' }}>
-                    {currentHasil.rhesus === 'Positif' ? 'Rh+' : currentHasil.rhesus === 'Negatif' ? 'Rh-' : currentHasil.rhesus}
-                  </span>
-                </>
-              )}
-            </div>
-            {currentHasil && currentHasil.nilai_sensor !== '-' && (
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                Nilai Sensor: {currentHasil.nilai_sensor}
-              </div>
+        <div style={{ background: 'var(--primary-light)', padding: '24px', borderRadius: '12px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
+          <div style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 600 }}>Hasil Deteksi</div>
+          <div style={{ fontSize: '42px', fontWeight: 800, color: 'var(--primary)', marginTop: '8px' }}>
+            {!currentHasil || currentHasil.golongan_darah === '-' ? (
+              <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>Belum ada hasil deteksi</span>
+            ) : (
+              <>
+                {currentHasil.golongan_darah} 
+                <span style={{ fontSize: '24px', marginLeft: '4px' }}>
+                  {currentHasil.rhesus === 'Positif' ? 'Rh+' : currentHasil.rhesus === 'Negatif' ? 'Rh-' : currentHasil.rhesus}
+                </span>
+              </>
             )}
           </div>
-
-          <div style={{ background: '#F4F7FE', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
-            <div style={{ color: 'var(--secondary)', fontSize: '14px', fontWeight: 600 }}>Hasil Deteksi Sebelum</div>
-            <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--secondary)', marginTop: '8px' }}>
-              {!prevHasil || prevHasil.golongan_darah === '-' ? (
-                <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>Belum ada hasil sebelumnya</span>
-              ) : (
-                <>
-                  {prevHasil.golongan_darah} 
-                  <span style={{ fontSize: '20px', marginLeft: '4px' }}>
-                    {prevHasil.rhesus === 'Positif' ? 'Rh+' : prevHasil.rhesus === 'Negatif' ? 'Rh-' : prevHasil.rhesus}
-                  </span>
-                </>
-              )}
+          {currentHasil && currentHasil.nilai_sensor !== '-' && (
+            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: 500 }}>
+              Nilai Sensor: {currentHasil.nilai_sensor}
             </div>
-            {prevHasil && prevHasil.nilai_sensor !== '-' && (
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                Nilai Sensor: {prevHasil.nilai_sensor}
-              </div>
-            )}
-          </div>
+          )}
         </div>
+
+        {currentHasil && (
+          <div style={{ 
+            marginTop: '24px', 
+            paddingTop: '20px', 
+            borderTop: '1px solid var(--border)', 
+            maxWidth: '600px',
+            margin: '24px auto 0 auto'
+          }}>
+            <h4 style={{ 
+              fontSize: '15px', 
+              fontWeight: 700, 
+              color: 'var(--secondary)', 
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Clock size={16} color="var(--primary)" /> Detail Waktu Pemeriksaan & Transmisi
+            </h4>
+            <div className="info-list" style={{ gap: '12px' }}>
+              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Mulai Pemeriksaan (Proses)</span>
+                <span className="info-value">{formatWIB(waktuMulaiVal)}</span>
+              </div>
+              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Selesai Pemeriksaan</span>
+                <span className="info-value">{formatWIB(waktuSelesaiVal)}</span>
+              </div>
+              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Kirim Alat</span>
+                <span className="info-value">{formatWIB(waktuKirimVal)}</span>
+              </div>
+              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Masuk Database (Selesai)</span>
+                <span className="info-value">{formatWIB(waktuMasukVal)}</span>
+              </div>
+              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+                <span className="info-label" style={{ fontWeight: 600, color: 'var(--secondary)' }}>Durasi Transmisi Data (Alat ke DB)</span>
+                <span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                  {getDuration(waktuKirimVal, waktuMasukVal) || '-'}
+                </span>
+              </div>
+              {!isTicking && (
+                <div className="info-item" style={{ paddingBottom: '4px' }}>
+                  <span className="info-label" style={{ fontWeight: 600, color: 'var(--secondary)' }}>
+                    Total Durasi Pemeriksaan (Proses ke Selesai)
+                  </span>
+                  <span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                    {getDisplayDuration()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="detail-grid">

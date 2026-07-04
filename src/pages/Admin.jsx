@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { apiClient as axios } from '../api/darah';
 
@@ -13,6 +13,7 @@ export default function Admin() {
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null });
   const [editId, setEditId] = useState(null);
   const [formData, setFormData] = useState({ nama_admin: '', username: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -52,6 +53,7 @@ export default function Admin() {
     setIsModalOpen(false);
     setEditId(null);
     setFormData({ nama_admin: '', username: '', password: '' });
+    setShowPassword(false);
   };
 
   const handleSubmit = async (e) => {
@@ -161,13 +163,36 @@ export default function Admin() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Password</label>
-                  <input 
-                    type="password" 
-                    className="form-control" 
-                    value={formData.password} 
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required={!editId}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      className="form-control" 
+                      style={{ paddingRight: '40px' }}
+                      value={formData.password} 
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      required={!editId}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

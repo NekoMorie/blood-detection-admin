@@ -9,6 +9,9 @@ const API_URL = `${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/
 
 export default function Pemeriksaan() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Semua');
+  const [goldarFilter, setGoldarFilter] = useState('Semua');
+  const [rhesusFilter, setRhesusFilter] = useState('Semua');
   const [data, setData] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [pendonors, setPendonors] = useState([]);
@@ -31,16 +34,16 @@ export default function Pemeriksaan() {
     try {
       const res = await axios.get(API_URL);
       setData(res.data);
-      
+
       const adminRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/admin`);
       setAdmins(adminRes.data);
-      
+
       const pendonorRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/pendonor`);
       setPendonors(pendonorRes.data);
-      
+
       const alatRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/alat`);
       setAlats(alatRes.data);
-      
+
       const hasilRes = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/hasil`);
       setHasils(hasilRes.data);
     } catch (err) {
@@ -48,11 +51,28 @@ export default function Pemeriksaan() {
     }
   };
 
-  const filteredData = data.filter(d => 
-    (d.nama_alat || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (d.id_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (d.nama_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = data.filter(d => {
+    // Exclude 'Menunggu Konfirmasi' and 'Ditolak'
+    if (d.status === 'Menunggu Konfirmasi' || d.status === 'Ditolak') {
+      return false;
+    }
+
+    const matchesSearch =
+      (d.nama_alat || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.id_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.nama_pendonor || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'Semua' || d.status === statusFilter;
+
+    const hasil = hasils.find(h => h.id_pemeriksaan === d._id);
+    const dbGoldar = hasil ? hasil.golongan_darah : '-';
+    const dbRhesus = hasil ? hasil.rhesus : '-';
+
+    const matchesGoldar = goldarFilter === 'Semua' || dbGoldar === goldarFilter;
+    const matchesRhesus = rhesusFilter === 'Semua' || dbRhesus === rhesusFilter;
+
+    return matchesSearch && matchesStatus && matchesGoldar && matchesRhesus;
+  });
 
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -91,25 +111,25 @@ export default function Pemeriksaan() {
   const handleOpenModal = (row = null) => {
     if (row) {
       setEditId(row._id);
-      setFormData({ 
-        id_pendonor: row.id_pendonor, 
-        nama_pendonor: row.nama_pendonor, 
-        id_admin: row.id_admin, 
-        tanggal_pemeriksaan: row.tanggal_pemeriksaan, 
-        status: row.status, 
-        nama_alat: row.nama_alat 
+      setFormData({
+        id_pendonor: row.id_pendonor,
+        nama_pendonor: row.nama_pendonor,
+        id_admin: row.id_admin,
+        tanggal_pemeriksaan: row.tanggal_pemeriksaan,
+        status: row.status,
+        nama_alat: row.nama_alat
       });
     } else {
       setEditId(null);
       const adminStr = localStorage.getItem('logged_in_admin');
       const loggedInAdmin = adminStr ? JSON.parse(adminStr) : null;
-      setFormData({ 
-        id_pendonor: '', 
-        nama_pendonor: '', 
-        id_admin: loggedInAdmin ? loggedInAdmin._id : 'admin', 
-        tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 
-        status: 'Menunggu', 
-        nama_alat: '' 
+      setFormData({
+        id_pendonor: '',
+        nama_pendonor: '',
+        id_admin: loggedInAdmin ? loggedInAdmin._id : 'admin',
+        tanggal_pemeriksaan: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+        status: 'Menunggu',
+        nama_alat: ''
       });
     }
     setIsModalOpen(true);
@@ -135,7 +155,7 @@ export default function Pemeriksaan() {
       alert('Gagal menyimpan data');
     }
   };
-  
+
   const handleDelete = async () => {
     if (!deleteModal.id) return;
     try {
@@ -152,13 +172,95 @@ export default function Pemeriksaan() {
     <div>
       <div className="table-container">
         <div className="table-header-row">
-          <div className="search-box" style={{ width: '400px' }}>
-            <input 
-              type="text" 
-              placeholder="Cari berdasarkan ID User (Pasien) atau Nama Alat..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: '12px', flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="search-box" style={{ width: '300px' }}>
+              <input
+                type="text"
+                placeholder="Cari berdasarkan ID User (Pasien) atau Nama Alat..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: '14px',
+                fontWeight: 500,
+                outline: 'none',
+                cursor: 'pointer',
+                backgroundColor: 'white',
+                color: 'var(--text)',
+                height: '42px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              <option value="Semua">Semua Status</option>
+              <option value="Menunggu">Menunggu</option>
+              <option value="Proses">Proses</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+            <select
+              value={goldarFilter}
+              onChange={(e) => {
+                setGoldarFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: '14px',
+                fontWeight: 500,
+                outline: 'none',
+                cursor: 'pointer',
+                backgroundColor: 'white',
+                color: 'var(--text)',
+                height: '42px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              <option value="Semua">Semua Golongan Darah</option>
+              <option value="A">Golongan Darah A</option>
+              <option value="B">Golongan Darah B</option>
+              <option value="AB">Golongan Darah AB</option>
+              <option value="O">Golongan Darah O</option>
+              <option value="-">Belum Terbaca / Kosong</option>
+            </select>
+            <select
+              value={rhesusFilter}
+              onChange={(e) => {
+                setRhesusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                fontSize: '14px',
+                fontWeight: 500,
+                outline: 'none',
+                cursor: 'pointer',
+                backgroundColor: 'white',
+                color: 'var(--text)',
+                height: '42px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transition: 'border-color 0.2s'
+              }}
+            >
+              <option value="Semua">Semua Rhesus</option>
+              <option value="Positif">Rhesus Positif (+)</option>
+              <option value="Negatif">Rhesus Negatif (-)</option>
+              <option value="-">Belum Terbaca / Kosong</option>
+            </select>
           </div>
           <button className="btn btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={18} /> Tambah Pemeriksaan
@@ -181,7 +283,14 @@ export default function Pemeriksaan() {
               <tr key={row._id}>
                 <td>
                   <div style={{ fontWeight: 600 }}>{row.nama_pendonor}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{getPendonorIdUser(row.id_pendonor)}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>{getPendonorIdUser(row.id_pendonor)}</span>
+                    {row.no_antrian && (
+                      <span className="badge badge-danger" style={{ fontSize: '11px', padding: '2px 6px', margin: 0, backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold', borderRadius: '4px' }}>
+                        Antrean: {row.no_antrian}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td>{row.nama_alat}</td>
                 <td>{row.tanggal_pemeriksaan}</td>
@@ -210,12 +319,12 @@ export default function Pemeriksaan() {
             ))}
           </tbody>
         </table>
-        <Pagination 
-          currentPage={currentPage} 
-          totalItems={filteredData.length} 
-          itemsPerPage={itemsPerPage} 
-          onPageChange={setCurrentPage} 
-          onItemsPerPageChange={setItemsPerPage} 
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredData.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
         />
       </div>
 
@@ -230,10 +339,10 @@ export default function Pemeriksaan() {
               <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label">Pasien</label>
-                  <Select 
+                  <Select
                     options={pendonorOptions}
                     value={pendonorOptions.find(o => o.value === formData.id_pendonor) || null}
-                    onChange={(selected) => setFormData({...formData, id_pendonor: selected ? selected.value : '', nama_pendonor: selected ? selected.nama : ''})}
+                    onChange={(selected) => setFormData({ ...formData, id_pendonor: selected ? selected.value : '', nama_pendonor: selected ? selected.nama : '' })}
                     placeholder="Cari dan pilih Pasien..."
                     isClearable
                     required
@@ -241,10 +350,10 @@ export default function Pemeriksaan() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Nama Alat</label>
-                  <Select 
+                  <Select
                     options={alatOptions}
                     value={alatOptions.find(o => o.value === formData.nama_alat) || null}
-                    onChange={(selected) => setFormData({...formData, nama_alat: selected ? selected.value : ''})}
+                    onChange={(selected) => setFormData({ ...formData, nama_alat: selected ? selected.value : '' })}
                     placeholder="Pilih Alat Deteksi..."
                     isClearable
                     required
