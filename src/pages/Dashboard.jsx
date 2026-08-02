@@ -14,17 +14,30 @@ export default function Dashboard() {
     { name: 'O+', count: 0 }, { name: 'O-', count: 0 },
   ]);
 
+  const fetchDashboard = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/dashboard/stats`);
+      setStats(res.data.stats);
+      setBloodTypeData(res.data.bloodTypeData);
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_API || 'http://localhost:5000'}/dashboard/stats`);
-        setStats(res.data.stats);
-        setBloodTypeData(res.data.bloodTypeData);
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
+    fetchDashboard();
+
+    const handleSSEUpdate = (event) => {
+      const { type } = event.detail || {};
+      if (['pemeriksaan', 'hasil', 'pendonor'].includes(type)) {
+        fetchDashboard();
       }
     };
-    fetchDashboard();
+
+    window.addEventListener('sse-update', handleSSEUpdate);
+    return () => {
+      window.removeEventListener('sse-update', handleSSEUpdate);
+    };
   }, []);
 
   return (

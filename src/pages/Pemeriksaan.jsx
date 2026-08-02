@@ -28,6 +28,18 @@ export default function Pemeriksaan() {
 
   useEffect(() => {
     fetchData();
+
+    const handleSSEUpdate = (event) => {
+      const { type } = event.detail || {};
+      if (['pemeriksaan', 'hasil', 'pendonor', 'alat'].includes(type)) {
+        fetchData();
+      }
+    };
+
+    window.addEventListener('sse-update', handleSSEUpdate);
+    return () => {
+      window.removeEventListener('sse-update', handleSSEUpdate);
+    };
   }, []);
 
   const fetchData = async () => {

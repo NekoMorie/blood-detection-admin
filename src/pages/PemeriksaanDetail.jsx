@@ -88,19 +88,19 @@ export default function PemeriksaanDetail() {
 
   useEffect(() => {
     fetchData(false);
-  }, [id]);
 
-  useEffect(() => {
-    let interval;
-    if (pemeriksaan && (pemeriksaan.status === 'Proses' || pemeriksaan.status === 'Menunggu')) {
-      interval = setInterval(() => {
+    const handleSSEUpdate = (event) => {
+      const { type } = event.detail || {};
+      if (['pemeriksaan', 'hasil', 'pendonor', 'alat'].includes(type)) {
         fetchData(true);
-      }, 2000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
+      }
     };
-  }, [id, pemeriksaan?.status]);
+
+    window.addEventListener('sse-update', handleSSEUpdate);
+    return () => {
+      window.removeEventListener('sse-update', handleSSEUpdate);
+    };
+  }, [id]);
 
 
   const fetchData = async (isSilent = false) => {
@@ -258,206 +258,211 @@ export default function PemeriksaanDetail() {
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <Link to="/pemeriksaan" className="btn btn-secondary" style={{ display: 'inline-flex' }}>
+        <Link to="/pemeriksaan" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center' }}>
           <ArrowLeft size={18} /> Kembali
         </Link>
       </div>
 
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 className="chart-title" style={{ marginBottom: '16px' }}>Status Pemeriksaan</h3>
-        
-        <div className="stepper-container">
-          {steps.map((step, index) => {
-            const isCompleted = index < currentStepIndex;
-            const isActive = index === currentStepIndex;
-            return (
-              <div key={step} className={`step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                <div className="step-circle">
-                  {isCompleted ? <Check size={20} /> : (index + 1)}
-                </div>
-                <div className="step-label">{step}</div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {/*
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '32px' }}>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => changeStatus('Menunggu')}
-            disabled={pemeriksaan.status === 'Menunggu'}
-          >
-            Set Menunggu
-          </button>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => changeStatus('Proses')}
-            disabled={pemeriksaan.status === 'Proses'}
-          >
-            Set Proses
-          </button>
-          <button 
-            className="btn" 
-            style={{ background: 'var(--success)', color: 'white' }} 
-            onClick={() => changeStatus('Selesai')}
-            disabled={pemeriksaan.status === 'Selesai'}
-          >
-            Set Selesai
-          </button>
-        </div>
-        */}
-      </div>
-
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 className="chart-title" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Droplet color="var(--primary)" /> Hasil Deteksi Darah
-        </h3>
-        <div style={{ background: 'var(--primary-light)', padding: '24px', borderRadius: '12px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
-          <div style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 600 }}>Hasil Deteksi</div>
-          <div style={{ fontSize: '42px', fontWeight: 800, color: 'var(--primary)', marginTop: '8px' }}>
-            {!currentHasil || currentHasil.golongan_darah === '-' ? (
-              <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)' }}>Belum ada hasil deteksi</span>
-            ) : (
-              <>
-                {currentHasil.golongan_darah} 
-                <span style={{ fontSize: '24px', marginLeft: '4px' }}>
-                  {currentHasil.rhesus === 'Positif' ? 'Rh+' : currentHasil.rhesus === 'Negatif' ? 'Rh-' : currentHasil.rhesus}
-                </span>
-              </>
-            )}
-          </div>
+      {/* Top Grid: Hasil Deteksi & Pemeriksaan */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+        gap: '24px', 
+        marginBottom: '24px' 
+      }}>
+        {/* Left Card: Hasil Deteksi */}
+        <div className="card" style={{ 
+          background: 'var(--danger-light)', 
+          borderRadius: 'var(--radius-lg)', 
+          padding: '32px 24px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          textAlign: 'center',
+          minHeight: '260px',
+          boxShadow: 'var(--shadow-soft)',
+          border: 'none'
+        }}>
+          <h3 style={{ color: 'var(--primary)', fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>Hasil Deteksi</h3>
+          
+          {!currentHasil || currentHasil.golongan_darah === '-' ? (
+            <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '20px' }}>
+              Belum ada hasil deteksi
+            </div>
+          ) : (
+            <div style={{ 
+              fontSize: '72px', 
+              fontWeight: 800, 
+              color: 'var(--primary)', 
+              marginBottom: '16px', 
+              display: 'flex', 
+              alignItems: 'baseline', 
+              gap: '8px', 
+              justifyContent: 'center',
+              lineHeight: 1
+            }}>
+              <span>{currentHasil.golongan_darah}</span>
+              <span style={{ fontSize: '36px', fontWeight: 700, marginLeft: '8px' }}>
+                {currentHasil.rhesus === 'Positif' ? 'Rh +' : currentHasil.rhesus === 'Negatif' ? 'Rh -' : currentHasil.rhesus}
+              </span>
+            </div>
+          )}
+          
           {currentHasil && currentHasil.nilai_sensor !== '-' && (
-            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: 500 }}>
+            <div style={{ fontSize: '15px', color: '#8F9BBA', fontWeight: 500 }}>
               Nilai Sensor: {currentHasil.nilai_sensor}
             </div>
           )}
         </div>
 
-        {currentHasil && (
+        {/* Right Card: Pemeriksaan */}
+        <div className="card" style={{ 
+          borderRadius: 'var(--radius-lg)', 
+          padding: '24px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          minHeight: '260px',
+          boxShadow: 'var(--shadow-soft)'
+        }}>
           <div style={{ 
-            marginTop: '24px', 
-            paddingTop: '20px', 
-            borderTop: '1px solid var(--border)', 
-            maxWidth: '600px',
-            margin: '24px auto 0 auto'
+            width: '60px', 
+            height: '60px', 
+            borderRadius: '50%', 
+            background: 'var(--danger-light)', 
+            color: 'var(--primary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            marginBottom: '12px'
           }}>
-            <h4 style={{ 
-              fontSize: '15px', 
-              fontWeight: 700, 
-              color: 'var(--secondary)', 
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <Clock size={16} color="var(--primary)" /> Detail Waktu Pemeriksaan & Transmisi
-            </h4>
-            <div className="info-list" style={{ gap: '12px' }}>
-              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
-                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Mulai Pemeriksaan (Proses)</span>
-                <span className="info-value">{formatWIB(waktuMulaiVal)}</span>
-              </div>
-              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
-                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Selesai Pemeriksaan</span>
-                <span className="info-value">{formatWIB(waktuSelesaiVal)}</span>
-              </div>
-              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
-                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Kirim Alat</span>
-                <span className="info-value">{formatWIB(waktuKirimVal)}</span>
-              </div>
-              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
-                <span className="info-label" style={{ fontWeight: 500 }}>Waktu Masuk Database (Selesai)</span>
-                <span className="info-value">{formatWIB(waktuMasukVal)}</span>
-              </div>
-              <div className="info-item" style={{ borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
-                <span className="info-label" style={{ fontWeight: 600, color: 'var(--secondary)' }}>Durasi Transmisi Data (Alat ke DB)</span>
-                <span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>
-                  {getDuration(waktuKirimVal, waktuMasukVal) || '-'}
-                </span>
-              </div>
-              {!isTicking && (
-                <div className="info-item" style={{ paddingBottom: '4px' }}>
-                  <span className="info-label" style={{ fontWeight: 600, color: 'var(--secondary)' }}>
-                    Total Durasi Pemeriksaan (Proses ke Selesai)
-                  </span>
-                  <span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>
-                    {getDisplayDuration()}
-                  </span>
-                </div>
-              )}
-            </div>
+            <Activity size={28} />
           </div>
-        )}
-      </div>
-
-      <div className="detail-grid">
-        <div className="detail-card">
-          <div className="profile-header">
-            <div className="profile-avatar">
-              <Activity size={48} />
-            </div>
-            <h3 className="profile-name">Pemeriksaan</h3>
-            <span className={`badge ${pemeriksaan.status === 'Selesai' ? 'badge-success' : pemeriksaan.status === 'Menunggu' ? 'badge-secondary' : 'badge-warning'}`}>
-              {pemeriksaan.status}
-            </span>
-          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--secondary)', marginBottom: '8px' }}>Pemeriksaan</h3>
+          <span className={`badge ${pemeriksaan.status === 'Selesai' ? 'badge-success' : pemeriksaan.status === 'Menunggu' ? 'badge-secondary' : 'badge-warning'}`} style={{ marginBottom: '16px' }}>
+            {pemeriksaan.status}
+          </span>
           
-          <div className="info-list">
-            <div className="info-item">
-              <span className="info-label"><Settings size={14} style={{ display: 'inline', marginRight: '6px' }}/> Alat</span>
-              <span className="info-value">{pemeriksaan.nama_alat}</span>
+          <div style={{ width: '100%', height: '1px', backgroundColor: 'var(--border)', margin: '16px 0' }} />
+          
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>
+                <Settings size={16} /> Alat
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{pemeriksaan.nama_alat}</span>
             </div>
-            <div className="info-item">
-              <span className="info-label"><Calendar size={14} style={{ display: 'inline', marginRight: '6px' }}/> Tanggal</span>
-              <span className="info-value">{pemeriksaan.tanggal_pemeriksaan}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>
+                <Calendar size={16} /> Tanggal
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{pemeriksaan.tanggal_pemeriksaan}</span>
             </div>
-            <div className="info-item">
-              <span className="info-label"><User size={14} style={{ display: 'inline', marginRight: '6px' }}/> Admin</span>
-              <span className="info-value">{admin ? admin.username : pemeriksaan.id_admin}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>
+                <User size={16} /> Admin
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{admin ? admin.username : pemeriksaan.id_admin}</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="detail-card">
-          <h3 className="chart-title" style={{ marginBottom: '24px' }}>Informasi Pasien</h3>
-          
-          {pendonor ? (
-            <div className="info-list grid-cols-2">
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Nama Pasien</span>
-                <span className="info-value" style={{ fontSize: '16px' }}>{pendonor.nama_pendonor}</span>
+      {/* Middle Card: Informasi Pasien */}
+      <div className="card" style={{ marginBottom: '24px', padding: '24px', boxShadow: 'var(--shadow-soft)' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--secondary)', marginBottom: '20px' }}>Informasi Pasien</h3>
+        {pendonor ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+            {/* Left Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>Nama Pasien</div>
+                <div style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '16px' }}>{pendonor.nama_pendonor}</div>
               </div>
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">ID User</span>
-                <span className="info-value">{pendonor.id_user || pendonor._id}</span>
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>Email</div>
+                <div style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '16px' }}>{pendonor.email}</div>
               </div>
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Email</span>
-                <span className="info-value">{pendonor.email}</span>
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>Tanggal Lahir</div>
+                <div style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '16px' }}>{pendonor.tanggal_lahir}</div>
               </div>
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Nomor Telepon</span>
-                <span className="info-value">{pendonor.no_telepon || '-'}</span>
+            </div>
+            
+            {/* Right Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>ID User</div>
+                <div style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '16px' }}>{pendonor.id_user || pendonor._id}</div>
               </div>
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Tanggal Lahir</span>
-                <span className="info-value">{pendonor.tanggal_lahir}</span>
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>Nomor Telepon</div>
+                <div style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '16px' }}>{pendonor.no_telepon || '-'}</div>
               </div>
-              <div className="info-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <span className="info-label">Status Verifikasi</span>
-                <span className="info-value">
+              <div>
+                <div style={{ color: '#8F9BBA', fontSize: '14px', marginBottom: '4px', fontWeight: 500 }}>Status Verifikasi</div>
+                <div style={{ marginTop: '4px' }}>
                   <span className={`badge ${pendonor.status_verifikasi === 'Terverifikasi' ? 'badge-success' : 'badge-warning'}`}>
                     {pendonor.status_verifikasi}
                   </span>
-                </span>
+                </div>
               </div>
             </div>
-          ) : (
-            <div style={{ color: 'var(--text-muted)' }}>Memuat informasi pendonor...</div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div style={{ color: 'var(--text-muted)' }}>Memuat informasi pendonor...</div>
+        )}
       </div>
+
+      {/* Bottom Card: Detail Waktu Pemeriksaan & Transmisi */}
+      {currentHasil && (
+        <div className="card" style={{ marginBottom: '24px', padding: '24px', boxShadow: 'var(--shadow-soft)' }}>
+          <h3 style={{ 
+            fontSize: '16px', 
+            fontWeight: 700, 
+            color: 'var(--secondary)', 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Clock size={18} color="var(--primary)" /> Detail Waktu Pemeriksaan & Transmisi
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '10px' }}>
+              <span style={{ color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>Waktu Mulai Pemeriksaan (Proses)</span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{formatWIB(waktuMulaiVal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '10px' }}>
+              <span style={{ color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>Waktu Selesai Pemeriksaan</span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{formatWIB(waktuSelesaiVal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '10px' }}>
+              <span style={{ color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>Waktu Kirim Alat</span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{formatWIB(waktuKirimVal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '10px' }}>
+              <span style={{ color: '#8F9BBA', fontSize: '14px', fontWeight: 500 }}>Waktu Masuk Database (Selesai)</span>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>{formatWIB(waktuMasukVal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '10px' }}>
+              <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>Durasi Transmisi Data (Alat ke DB)</span>
+              <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '14px' }}>
+                {getDuration(waktuKirimVal, waktuMasukVal) || '-'}
+              </span>
+            </div>
+            {!isTicking && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '4px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--secondary)', fontSize: '14px' }}>Total Durasi Pemeriksaan (Proses ke Selesai)</span>
+                <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '14px' }}>
+                  {getDisplayDuration()}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
