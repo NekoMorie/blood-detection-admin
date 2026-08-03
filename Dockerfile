@@ -21,5 +21,5 @@ RUN npm run build
 # Expose port 3000 (standard for Node/Dokploy deployment)
 EXPOSE 3000
 
-# Run the Vite preview server bound to all network interfaces on port 3000
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
+# Run the Vite preview server using npm start
+CMD ["npm", "start"]
